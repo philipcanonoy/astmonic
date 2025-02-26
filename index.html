@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto News Aggregator</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+            display: flex;
+            height: 100vh;
+            transition: background 0.3s;
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            background: #1e1e1e;
+            color: #fff;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 30% 70%;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #fff;
+            border-right: 2px solid #ddd;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        .dark-mode .sidebar {
+            background: #2c2c2c;
+            border-right: 2px solid #444;
+        }
+
+        .news-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .news-item:hover {
+            background: #f0f0f0;
+        }
+
+        .dark-mode .news-item:hover {
+            background: #3a3a3a;
+        }
+
+        .good { color: green; }
+        .bad { color: red; }
+        .neutral { color: #555; }
+
+        /* News Details */
+        .news-details {
+            padding: 20px;
+            background: #fff;
+            text-align: center;
+            transition: background 0.3s;
+        }
+
+        .dark-mode .news-details {
+            background: #2c2c2c;
+        }
+
+        .news-details h2 {
+            margin-bottom: 10px;
+        }
+
+        .news-details a {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 15px;
+            background: #0077cc;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .news-details a:hover {
+            background: #005fa3;
+        }
+
+        /* Search and Filters */
+        .controls {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .filter-select {
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        /* Dark Mode Button */
+        .dark-mode-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .toggle-dark-mode {
+    background: #0077cc;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 20px;
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-dark-mode:hover {
+    background: #005fa3;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>Crypto News</h2>
+            <div class="controls">
+                <input type="text" class="search-input" id="search" placeholder="🔍 Search...">
+                <select class="filter-select" id="filter">
+                    <option value="all">All</option>
+                    <option value="good">Good</option>
+                    <option value="bad">Bad</option>
+                    <option value="neutral">Neutral</option>
+                </select>
+            </div>
+            <div id="news-list"></div>
+
+            <!-- Dark Mode Button -->
+            <div class="dark-mode-container">
+                <button class="toggle-dark-mode" onclick="toggleDarkMode()">🌙</button>
+            </div>
+        </div>
+
+        <!-- News Details -->
+        <div class="news-details" id="news-details">
+            <h2>Select a news item</h2>
+            <p>Click on a headline from the left to view details here.</p>
+        </div>
+    </div>
+
+    <script>
+        let newsData = [];
+
+        // Function to determine sentiment
+        function getSentiment(title) {
+            const lowerTitle = title.toLowerCase();
+            const goodKeywords = ["adoption", "surge", "record", "growth", "upgrade", "partnership"];
+            const badKeywords = ["hack", "ban", "scam", "crash", "fraud", "loss", "downgrade"];
+
+            for (let word of badKeywords) {
+                if (lowerTitle.includes(word)) return "Bad";
+            }
+            for (let word of goodKeywords) {
+                if (lowerTitle.includes(word)) return "Good";
+            }
+            return "Neutral";
+        }
+
+        // Fetch news
+        async function fetchNews() {
+            const apiKey = "YOUR_CRYPTOPANIC_API_KEY";  // Replace with your API key
+            const url = `https://cryptopanic.com/api/v1/posts/?auth_token=${apiKey}&public=true`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                newsData = data.results;
+                displayNews(newsData);
+            } catch (error) {
+                console.error("Error fetching news:", error);
+            }
+        }
+
+        // Display news in the sidebar
+        function displayNews(newsArray) {
+            const newsList = document.getElementById("news-list");
+            newsList.innerHTML = "";
+
+            newsArray.forEach(news => {
+                const sentiment = getSentiment(news.title);
+                const sentimentClass = sentiment === "Good" ? "good" : sentiment === "Bad" ? "bad" : "neutral";
+
+                const newsItem = document.createElement("div");
+                newsItem.classList.add("news-item");
+                newsItem.innerHTML = `<h3 class="${sentimentClass}">${news.title}</h3>`;
+                newsItem.onclick = () => showNewsDetails(news, sentiment);
+
+                newsList.appendChild(newsItem);
+            });
+        }
+
+        // Show details in right panel
+        function showNewsDetails(news, sentiment) {
+            const newsDetails = document.getElementById("news-details");
+            const sentimentClass = sentiment === "Good" ? "good" : sentiment === "Bad" ? "bad" : "neutral";
+
+            newsDetails.innerHTML = `
+                <h2>${news.title}</h2>
+                <p class="${sentimentClass}">Sentiment: ${sentiment}</p>
+                <a href="${news.url}" target="_blank">Read More</a>
+            `;
+        }
+
+        // Filter news
+        document.getElementById("filter").addEventListener("change", function () {
+            const filterValue = this.value;
+            let filteredNews = newsData;
+
+            if (filterValue !== "all") {
+                filteredNews = newsData.filter(news => getSentiment(news.title).toLowerCase() === filterValue);
+            }
+
+            displayNews(filteredNews);
+        });
+
+        // Search news
+        document.getElementById("search").addEventListener("input", function () {
+            const searchTerm = this.value.toLowerCase();
+            const filteredNews = newsData.filter(news => news.title.toLowerCase().includes(searchTerm));
+            displayNews(filteredNews);
+        });
+
+        // Toggle Dark Mode
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+        }
+
+        // Initial Fetch
+        fetchNews();
+        setInterval(fetchNews, 60000);
+    </script>
+</body>
+</html>
